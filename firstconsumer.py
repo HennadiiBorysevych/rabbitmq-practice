@@ -1,14 +1,10 @@
 import pika
 import time
 import random
+from pika.exchange_type import ExchangeType
 
 def on_message_received(ch, method, properties, body):
-    processing_time = random.randint(1, 6)
-
-    print(f"received: {body}, will take {processing_time} to process")
-    time.sleep(processing_time)
-    ch.basic_ack(delivery_tag=method.delivery_tag)
-    print("Finished processing the message")
+    print(f"firstconsumer received: {body} to process")
 
 connection_parameters = pika.ConnectionParameters('localhost')
 
@@ -16,9 +12,11 @@ connection = pika.BlockingConnection(connection_parameters)
 
 channel = connection.channel()
 
-channel.queue_declare(queue='letterbox')
+channel.exchange_declare(exchange='pubsub', exchange_type=ExchangeType.fanout)
 
-channel.basic_qos(prefetch_count=1)
+queue = channel.queue_declare(queue='', exclusive=True)
+
+channel.queue_bind(exchange='pubsub', queue=queue.method.queue)
 
 channel.basic_consume(queue='letterbox', on_message_callback=on_message_received)
 
